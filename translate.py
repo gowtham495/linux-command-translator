@@ -1,8 +1,11 @@
 import requests
 
 OLLAMA_URL = "http://localhost:11434/api/generate"
+# Used phi3:mini as it is an efficeint model
+# It is instruction based and can run in CPU-only hardeware.
 MODEL = "phi3:mini"
 
+# Will enhance the prompt template im future.
 SYSTEM_PROMPT = """
 You are a Linux command translator.
 
@@ -14,7 +17,7 @@ STRICT RULES (must follow):
 - Do NOT add extra text before or after the command.
 - If unsure, output the closest safe command.
 
-Breaking any rule is a failure.
+Breaking any rule is a FAILURE. UTTER FAILURE!!!
 """
 
 def translate_to_shell(plain_english: str) -> str:
@@ -25,9 +28,9 @@ def translate_to_shell(plain_english: str) -> str:
         "prompt": prompt,
         "stream": False,
         "options": {
-            "temperature": 0.1,
-            "top_p": 0.9,
-            "num_predict": 80
+            "temperature": 0.1, # I have set this to lower value to get more deterministic output
+            "top_p": 0.9, 
+            "num_predict": 80 
         }
     }
 
@@ -41,5 +44,4 @@ if __name__ == "__main__":
         user_input = input("\n Describe task (or 'exit'): ")
         if user_input.lower() == "exit":
             break
-        print("\n💻 Command:")
         print(translate_to_shell(user_input))
