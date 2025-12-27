@@ -31,7 +31,7 @@ def build_payload(model_id: str, user_input: str) -> dict:
 def save_interaction(input_text: str, model_output: str, model_id: str):
     """
         Whenever user inputs an instruction, 
-        this funcion will save the input and generated output command to DB.
+        this function will save the input and generated output command to DB.
         This can be used for future fine-tuning of model.
     """
     logger = setup_logger("save_interaction")
