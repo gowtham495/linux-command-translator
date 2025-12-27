@@ -3,48 +3,49 @@ import requests
 from logger import setup_logger
 from db import get_connection
 
+# Loading the configs
+from configs.model_registry import EXPERIMENTS
+from configs.prompts import PROMPTS
+
 OLLAMA_URL = "http://localhost:11434/api/generate"
+MODEL_ID = "phi3-mini:exp"
 
-# Used phi3:mini as it is an efficient model
-# It is instruction based and can run in CPU-only hardware.
-# To know more about model visit https://ollama.com/library/phi3:mini
-MODEL = "phi3:mini" 
-MODEL_VERSION = "4k-instruct-q4" # 4-bit quantized version.
-TEMPERATURE = 0.1 # I have set this to lower value to get more deterministic output.
-TOP_P = 0.9 # Balancing so that there will be less hallucination.
-NUM_PREDICT = 80 # Maximum tokens the model is allowed to generate. Should be enough for even complex bash commands.
+def build_payload(model_id: str, user_input: str) -> dict:
+    params = EXPERIMENTS[model_id]
+    prompt = PROMPTS[params.prompt_template].replace(
+        "{{input}}", user_input
+    )
+
+    return {
+        "model": params.model_name,
+        "prompt": prompt,
+        "stream": False,
+        "options": {
+            "temperature": params.temperature,
+            "top_p": params.top_p,
+            "num_predict": params.num_predict,
+        }
+    }
 
 
-# Will enhance the prompt template in future 
-# based on user feedback.
-SYSTEM_PROMPT = """
-You are a Linux command translator.
-
-STRICT RULES (must follow):
-- Output ONLY ONE valid bash command.
-- Do NOT include explanations.
-- Do NOT include markdown, backticks, or code fences.
-- Do NOT add comments.
-- Do NOT add extra text before or after the command.
-- If unsure, output the closest safe command.
-
-Breaking any rule is a FAILURE. UTTER FAILURE!!!
-"""
-
-def save_interaction(
-    input_text: str,
-    model_output: str,
-    model_name: str = MODEL,
-    model_version: str = MODEL_VERSION,
-    metadata: dict | None = None,
-):
-
+def save_interaction(input_text: str, model_output: str, model_id: str):
     """
         Whenever user inputs an instruction, 
         this funcion will save the input and generated output command to DB.
         This can be used for future fine-tuning of model.
     """
     logger = setup_logger("save_interaction")
+    
+    # Fetching params from model registry based on model_id
+    params = EXPERIMENTS[model_id]
+    model_name = params.model_name
+    model_version = params.model_version
+    metadata = {
+        "temperature": params.temperature,
+        "top_p": params.top_p,
+        "num_predict": params.num_predict,
+    }
+
     logger.debug("Opening DB connection.")
     conn = get_connection()
     try:
@@ -84,17 +85,10 @@ def translate_to_shell(plain_english: str) -> str:
     logger = setup_logger("translate_to_shell")
     logger.info("Received instruction: %s", plain_english)
 
-    prompt = f"{SYSTEM_PROMPT}\n\nTask: {plain_english}\nCommand:"
-    payload = {
-        "model": MODEL,
-        "prompt": prompt,
-        "stream": False,
-        "options": {
-            "temperature": TEMPERATURE,
-            "top_p": TOP_P, 
-            "num_predict": NUM_PREDICT 
-        }
-    }
+    payload = build_payload(
+        model_id=MODEL_ID,
+        user_input=plain_english
+    )
 
     logger.debug("Sending request to Ollama API.")
     response = requests.post(OLLAMA_URL, json=payload, timeout=300)
@@ -106,11 +100,7 @@ def translate_to_shell(plain_english: str) -> str:
     save_interaction(
         input_text=plain_english,
         model_output=result,
-        metadata={
-            "temperature": TEMPERATURE,
-            "top_p": TOP_P,
-            "num_predict": NUM_PREDICT
-        }
+        model_id=MODEL_ID
     )
     
     return result
