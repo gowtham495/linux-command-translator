@@ -1,6 +1,5 @@
 import streamlit as st
 from translate import translate_to_shell
-import time
 
 # Set page configuration
 st.set_page_config(
