@@ -1,208 +1,164 @@
-# Linux Command Translator (Plain English → Bash)
+# Linux Command Translator (English → Bash)
 
-A lightweight **Linux command translator** that converts plain English instructions into **single, valid Bash commands** using a **small language model (SLM)** running **locally on CPU** via **Ollama**.
-
-This tool is designed for engineers, sysadmins, and power users who want fast, private, and dependency-light command generation without cloud LLMs.
-
----
-
-## 🚀 Key Features
-
-- Plain English → **one clean Bash command**
-- Uses **SLMs only** (CPU-friendly)
-- Runs **100% locally** via Ollama
-- No explanations, no markdown, no noise — just the command
-- Safe-by-design prompt rules
-- Interactive CLI mode
+A lightweight, CPU‑friendly tool that converts **plain English instructions into safe Linux shell commands** using a **Small Language Model (SLM)** running locally via **Ollama**.  
+The project is designed with **feedback collection**, **data quality**, and **future fine‑tuning** in mind.
 
 ---
 
-## 🧠 Architecture Overview
+## ✨ Key Features
+
+- **Plain English → Bash command translation**
+- **Streamlit** App UI
+- Uses **Phi‑3‑mini** (efficient, instruction‑tuned SLM)
+- **Dockerized PostgreSQL** for zero‑friction setup
+- Stores prompts, outputs, and metadata for future fine‑tuning of SLM
+- Structured feedback‑ready database schema
+- Proper logging (no noisy `print()` calls)
+- Runs fully on **CPU‑only hardware**
+
+---
+
+## 🧱 Architecture Overview
 
 ```
-User (English Input)
-        ↓
-translate.py
-        ↓
-Ollama REST API (localhost)
-        ↓
-phi-3-mini (CPU)
-        ↓
-Single Bash Command (stdout)
+Streamlit App UI
+        │
+        ▼
+User Input (English)
+        │
+        ▼
+Translate Prompt
+        │
+        ▼
+Ollama (phi3:mini)
+        │
+        ▼
+Generated Bash Command
+        │
+        ├── Display to user in UI
+        └── Persist to PostgreSQL (for feedback & future training)
 ```
+---
+
+## 🚀 Getting Started
+
+### 1️. Prerequisites
+
+- Python **3.10+**
+- Docker + Docker Compose
+- Ollama installed locally
 
 ---
 
-## 🤖 Model Choice
+### 2️. Start PostgreSQL (Docker)
 
-- **Model:** `phi3:mini`
-- **Why?**
-  - Optimized for CPU
-  - Fast inference
-  - Strong instruction-following
-  - Available directly in Ollama
-
-You can swap models if needed (see Configuration).
-
----
-
-## 📦 Project Structure
-
-```
-linux-command-translator/
-├── translate.py        # CLI + Ollama integration
-├── requirements.txt   # Minimal Python dependencies
-├── README.md
-└── .gitignore
-```
-
----
-
-## 🔧 Requirements
-
-### System
-- Linux / macOS / Windows (WSL recommended)
-- Python **3.9+**
-- CPU-only machine is sufficient
-
-### Software
-- **Ollama** installed and running  
-  👉 https://ollama.com
-
----
-
-## 🛠 Installation
-
-### 1️⃣ Clone the repository
 ```bash
-git clone https://github.com/your-username/linux-command-translator.git
-cd linux-command-translator
+docker compose up -d
 ```
 
-### 2️⃣ Install Python dependencies
+This will:
+- Start PostgreSQL
+- Create the database
+- Initialize schema via `db/init.sql`
+
+---
+
+### 3️. Create & activate virtual environment
+
 ```bash
-pip install -r requirements.txt
+python -m venv myenv
 ```
 
-### 3️⃣ Pull the model in Ollama
+**Linux / macOS**
+```bash
+source myenv/bin/activate
+```
+
+**Windows**
+```powershell
+myenv\Scripts\activate
+```
+
+---
+
+### 4️. Install Python dependencies
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+---
+
+### 5️. Pull the SLM model (if not already present)
+
 ```bash
 ollama pull phi3:mini
 ```
 
-### 4️⃣ Start Ollama
-```bash
-ollama serve
-```
-
 ---
 
-## ▶️ Usage
-
-Run the translator in interactive mode:
+### 6️. Run the application (Streamlit will run in http://localhost:8501/)
 
 ```bash
-python translate.py
+python app.py
 ```
 
-You’ll see:
+---
+
+## 🖼️ Streamlit UI Snapshots
+
+<img width="940" height="491" alt="image" src="https://github.com/user-attachments/assets/b13a1f4e-2f00-4867-b036-294b09857dc5" /> 
+
+<img width="940" height="556" alt="image" src="https://github.com/user-attachments/assets/d24477d8-36a5-4ac6-8ba3-d25ebcb0a1d5" />
+
+---
+
+## 🔁 Feedback Loop (Future‑Ready)
+
+The stored data enables:
+
+- Manual or UI‑based feedback (`is_correct`)
+- Human‑corrected outputs
+- Clean dataset export (JSONL)
+- LoRA fine‑tuning of Phi‑3‑mini
+
+This project is designed to **improve over time**.
+
+---
+
+## 📁 Project Structure
+
 ```
-Describe task (or 'exit'):
+linux-command-translator/
+├── app.py              # Main entry point
+├── translate.py        # Ollama prompt + inference logic
+├── db.py               # PostgreSQL connection helper
+├── logger.py           # Centralized logging setup
+├── requirements.txt    # Python dependencies
+├── docker-compose.yml  # PostgreSQL container
+└── db/
+    └── init.sql        # DB schema initialization
 ```
 
-Type a task in plain English.
-
 ---
 
-## 🧪 Example Inputs & Outputs
+## 📌 Roadmap Ideas
 
-| English Input | Generated Bash Command |
-|--------------|-----------------------|
-| Find all `.log` files modified today | `find . -name "*.log" -mtime 0` |
-| Show top 5 memory-consuming processes | `ps aux --sort=-%mem | head -n 6` |
-| Count lines in all txt files | `wc -l *.txt` |
-| Find process using port 8080 | `lsof -i :8080` |
-
----
-
-## ⚙️ Configuration
-
-Edit `translate.py`:
-
-```python
-MODEL = "phi3:mini"
-OLLAMA_URL = "http://localhost:11434/api/generate"
-```
-
-### Supported Alternatives (CPU-friendly)
-- `qwen2.5:1.5b`
-- `gemma:2b`
-- `llama3.2:1b`
-
----
-
-## 🔒 Safety & Prompt Rules
-
-The system prompt enforces:
-
-- Exactly **ONE Bash command**
-- No explanations or comments
-- No markdown or formatting
-- Closest **safe** command if ambiguous
-
-This makes the output:
-- Scriptable
-- Pipe-friendly
-- CI/CD compatible
-
----
-
-## ⚠️ Limitations
-
-- Bash-focused (not PowerShell)
-- No multi-command pipelines with explanations
-- Assumes user has basic Linux context
-- Not a replacement for understanding commands ⚠️
-
----
-
-## 🛣 Roadmap
-
-Planned improvements:
-- `--dry-run` mode
-- Command risk scoring
-- Shell autodetection (bash/zsh/fish)
-- JSON output mode for automation
-- History + caching
-- Reverse translation (Linux command -> Explanation in Plain English)
+- User feedback from CLI / UI
+- Finetune SLM using LoRA and command feedback from DB
+- Implement RAG with `man` pages
+- Safety classifier for destructive commands
+- Enhanced Promt Template for more accurate results
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome.
-
-Suggested areas:
-- Prompt tuning
-- Model benchmarking
-- Safety guardrails
-- UX improvements
-
-Fork → Improve → PR.
+PRs welcome. Keep changes:
+- deterministic
+- well‑logged
+- schema‑safe
 
 ---
 
-## 📄 License
-
-MIT License  
-Use it, modify it, ship it.
-
----
-
-## 🙌 Philosophy
-
-> Fast. Local. Private. Practical.
-
-If you understand Linux, this tool **multiplies your speed**.  
-If you don’t — it forces you to learn responsibly.
-
-Use wisely.
+Built with engineering discipline — not hype.
